@@ -1,0 +1,90 @@
+import 'dart:async';
+
+void main() {
+  int count = 0;
+  int work_time = 25;
+  int work_cnt = 1;
+  int rest_time = 5;
+  int stop = 0;
+  int work = 1;
+  print('flutter: Pomodoro 타이머를 시작합니다.');
+
+  Timer.periodic(Duration(seconds: 1), (timer) {
+    if (stop != 1) {
+      count++;
+
+      if (work == 1)
+        work_time--;
+      else
+         rest_time--;
+      print('flutter: $count 분');
+
+      if (work_time == 0) {
+        print('flutter: $work_cnt 회차 작업 시간이 종료되었습니다. 휴식 시간을 시작합니다.');
+        //work_time = 25;
+        rest_time = 5;
+        work_cnt++;
+        count = 0;
+        work = 0;
+
+        if (work_cnt == 4)
+          rest_time = 15;
+      }
+
+      if (rest_time == 0) {
+        print('flutter: 휴식 시간이 종료되었습니다. $work_cnt 회차 작업 시간을 시작합니다.');
+        work_time = 25;
+        //rest_time = 5;
+        count = 0;
+        work = 1;
+      }
+
+      if (rest_time == 15)
+        stop = 1;
+
+    } // stop 0 - if 문
+
+    if (stop == 1) {
+      timer.cancel();
+      print('타이머 종료');
+    } // stop 1
+
+  });
+}
+
+
+
+==>> 결과
+
+flutter: Pomodoro 타이머를 시작합니다.
+flutter: 1 분
+flutter: 2 분
+flutter: 3 분
+flutter: 4 분
+flutter: 5 분
+flutter: 6 분
+flutter: 7 분
+flutter: 8 분
+flutter: 9 분
+flutter: 10 분
+flutter: 11 분
+flutter: 12 분
+flutter: 13 분
+flutter: 14 분
+flutter: 15 분
+flutter: 16 분
+flutter: 17 분
+flutter: 18 분
+flutter: 19 분
+flutter: 20 분
+flutter: 21 분
+flutter: 22 분
+flutter: 23 분
+flutter: 24 분
+flutter: 25 분
+flutter: 1 회차 작업 시간이 종료되었습니다. 휴식 시간을 시작합니다.
+flutter: 1 분
+flutter: 2 회차 작업 시간이 종료되었습니다. 휴식 시간을 시작합니다.
+flutter: 1 분
+flutter: 3 회차 작업 시간이 종료되었습니다. 휴식 시간을 시작합니다.
+타이머 종료
