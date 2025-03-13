@@ -1,0 +1,225 @@
+![image](https://github.com/user-attachments/assets/5fd5afe3-879a-4ad0-93cd-8116b72bbaf5)
+
+# flutter 코드 ------------------------------
+
+import 'dart:convert';
+import 'dart:io'; // HttpOverrides를 위해 추가
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+void main() {
+  // SSL 인증서 검증 우회 설정
+  HttpOverrides.global = MyHttpOverrides();
+  runApp(MyApp());
+}
+
+// SSL 인증서 검증을 우회하는 클래스 추가
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: MyHomePage(),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  String result = "";
+  TextEditingController urlController =
+      TextEditingController(); // URL을 입력 받는 컨트롤러
+
+  Future<void> fetchData() async {
+    try {
+      final enteredUrl = urlController.text; // 입력된 URL 가져오기
+
+      // URL이 슬래시로 끝나지 않으면 슬래시 추가
+      final baseUrl = enteredUrl.endsWith('/') ? enteredUrl : enteredUrl + '/';
+
+      final response = await http.get(
+        Uri.parse(baseUrl + "sample"), // 입력된 URL 사용
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': '69420',
+          'User-Agent': 'Mozilla/5.0', // User-Agent 추가
+          'Accept': '*/*', // Accept 헤더 추가
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          result =
+              "predicted_label-> ${data['predicted_label']}\nprediction_score-> ${data['prediction_score']}";
+        });
+      } else {
+        setState(() {
+          result =
+              "Failed to fetch data. Status Code-> ${response.statusCode}\nResponse-> ${response.body}";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        result = "Error: $e";
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Jellyfish classifier"),
+        centerTitle: true,
+        leading: Icon(Icons.menu),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Container(              
+              child: Image.asset(
+                'images/jellyfish.jpg',
+                width: 300,
+                height: 300,
+              ),
+            ),
+            TextField(
+              controller: urlController, // URL 입력을 위한 TextField
+              decoration: InputDecoration(labelText: "URL 입력"), // 입력 필드의 라벨
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: fetchData,
+                  child: Text("예측결과"),
+                ),
+                ElevatedButton(
+                  onPressed: fetchData,
+                  child: Text("예측확률"),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            Text(
+              result,
+              style: TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+# 서버 코드 ----------------------------------
+
+import uvicorn   # pip install uvicorn 
+from fastapi import FastAPI, HTTPException   # pip install fastapi 
+from fastapi.middleware.cors import CORSMiddleware
+import vgg16_prediction_model
+import logging
+
+-# Create the FastAPI application
+app = FastAPI()
+
+-# CORS configuration
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+-# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+-# Load the model once
+try:
+    vgg16_model = vgg16_prediction_model.load_model()
+except Exception as e:
+    logger.error("Failed to load model: %s", e)
+    raise
+
+-# A simple example of a GET request
+@app.get("/")
+async def read_root():
+    logger.info("Root URL was requested")
+    return "VGG16모델을 사용하는 API를 만들어 봅시다."
+
+@app.get('/sample')
+async def sample_prediction():
+    try:
+        result = await vgg16_prediction_model.prediction_model(vgg16_model)
+        logger.info("Prediction was requested and done")
+        return result
+    except Exception as e:
+        logger.error("Prediction failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+-# Run the server
+if __name__ == "__main__":
+    uvicorn.run("quest_05:app",
+            reload= True,   # Reload the server when code changes
+            host="127.0.0.1",   # Listen on localhost 
+            port=5000,   # Listen on port 5000 
+            log_level="info"   # Log level
+            )
+
+
+# 예측 코드 ---------------------------
+
+import tensorflow as tf
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.imagenet_utils import decode_predictions
+from PIL import Image
+import numpy as np
+import os
+
+def load_model():
+    model_path = os.path.expanduser('./vgg16.h5')
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+    model = tf.keras.models.load_model(model_path)
+    return model
+
+async def prediction_model(model):
+    img_path = os.path.expanduser('./sample_data/jellyfish.jpg')
+    if not os.path.exists(img_path):
+        raise FileNotFoundError(f"Image file not found: {img_path}")
+    
+    img = Image.open(img_path)
+    target_size = 224
+    img = img.resize((target_size, target_size))
+
+    np_img = image.img_to_array(img)
+    img_batch = np.expand_dims(np_img, axis=0)
+    pre_processed = preprocess_input(img_batch)
+    
+    y_preds = model.predict(pre_processed)
+    np.set_printoptions(suppress=True, precision=5)
+    result = decode_predictions(y_preds, top=1)
+    result = {"predicted_label": str(result[0][0][1]), "prediction_score": str(result[0][0][2])}
+    return result
+
+    
+ 
