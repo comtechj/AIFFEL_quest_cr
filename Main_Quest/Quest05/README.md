@@ -1,6 +1,10 @@
-
-
+## 와이어 프레임
 <img src="https://github.com/user-attachments/assets/f2db881e-6b65-4a6b-8bec-55c717f02197" width="60%" height="60%" />
+
+## 동작 영상
+https://github.com/user-attachments/assets/e51bc815-4b2c-400c-89fe-2cd304a2978d
+
+
 
 
 # AIFFEL Campus Online Code Peer Review Templete
