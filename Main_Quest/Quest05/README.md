@@ -1,6 +1,6 @@
 
-![프로토타이핑](https://github.com/user-attachments/assets/df461d13-510d-4517-8a0f-e367631e643c)
 
+<img src="https://github.com/user-attachments/assets/f2db881e-6b65-4a6b-8bec-55c717f02197" width="60%" height="60%" />
 
 
 # AIFFEL Campus Online Code Peer Review Templete
